@@ -1,21 +1,80 @@
 // use prisma-8
 
-model User {
-  id        Int      @id @default(autoincrement())
-  email     String   @unique
-  username  String?
-  name      String?
-  posts     Post[]
-  createdAt TimestamptzString @default(now())
-  updatedAt temporal.updatedAtString()
+enum ROLE {
+  STAFF
+  ADMIN
 }
 
-model Post {
-  id        Int      @id @default(autoincrement())
-  title     String
-  content   String?
-  author    User     @relation(fields: [authorId], references: [id])
-  authorId  Int
+model User {
+  id        String      @id @default(uuid())
+  email     String   @unique
+  name      String
+  password  String
+  role      ROLE @default(STAFF)
+
   createdAt TimestamptzString @default(now())
   updatedAt temporal.updatedAtString()
+
+  @@map("users")
+}
+
+
+model Category {
+  id        String      @id @default(uuid())
+  name      String
+  products  Product[]
+
+  createdAt TimestamptzString @default(now())
+  updatedAt temporal.updatedAtString()
+
+  @@map("categories")
+}
+
+
+model Product {
+  id        String      @id @default(uuid())
+  name      String
+  price     Int
+  description String
+  banner    String
+  disabled  Boolean @default(false)
+  items Item[]
+
+  category_id String
+  category    Category @relation(fields: [category_id], references: [id], onDelete: Cascade)
+  
+  createdAt TimestamptzString @default(now())
+  updatedAt temporal.updatedAtString()
+
+  @@map("products")
+}
+
+model Order { 
+  id        String      @id @default(uuid())
+  table     Int
+  name      String?
+  status    Boolean @default(false)
+  draft     Boolean @default(true)
+  items Item[]
+  
+  createdAt TimestamptzString @default(now())
+  updatedAt temporal.updatedAtString()
+
+  @@map("orders")
+}
+
+model Item {
+  id        String      @id @default(uuid())
+  amount    Int
+
+  order_id  String
+  order     Order @relation(fields: [order_id], references: [id], onDelete: Cascade)
+
+  product_id  String
+  product     Product @relation(fields: [product_id], references: [id], onDelete: Cascade)
+
+  createdAt TimestamptzString @default(now())
+  updatedAt temporal.updatedAtString()
+
+  @@map("items")
 }
