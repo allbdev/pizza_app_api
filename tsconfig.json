@@ -2,11 +2,11 @@
   "compilerOptions": {
     // Linguagem e Módulos
     "target": "ES2020", // Versão do JavaScript para compilação
-    "module": "commonjs", // Sistema de módulos (CommonJS para Node.js)
+    "module": "preserve", // Sistema de módulos (CommonJS para Node.js)
     "lib": [
       "ES2020"
     ], // Bibliotecas de tipos incluídas
-    "moduleResolution": "node", // Estratégia de resolução de módulos (Node.js)
+    "moduleResolution": "bundler", // Estratégia de resolução de módulos (Node.js)
     // Diretórios
     "outDir": "./dist", // Pasta de saída dos arquivos compilados
     "rootDir": "./src", // Pasta raiz dos arquivos fonte

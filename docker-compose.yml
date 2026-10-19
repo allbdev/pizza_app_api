@@ -1,0 +1,22 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: pizza_app_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: pizza
+      POSTGRES_PASSWORD: pizza
+      POSTGRES_DB: pizza_app
+    ports:
+      # host:container — 5432 is already used by other containers on this machine
+      - "5435:5432"
+    volumes:
+      - pizza_app_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pizza -d pizza_app"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pizza_app_pgdata:
