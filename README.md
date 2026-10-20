@@ -58,11 +58,11 @@ This starts a `postgres:17-alpine` container named `pizza_app_postgres`:
 
 ### 4. Create the tables
 
-First time only:
+Apply the committed migrations from `migrations/`:
 
 ```bash
-pnpm prisma contract emit   # generate contract.json / contract.d.ts
-pnpm prisma db init         # create the tables and sign the database
+pnpm prisma contract emit                 # generate contract.json / contract.d.ts
+pnpm prisma db migrate --advance-ref db   # apply the migrations to your local database
 ```
 
 ### 5. Run the API
@@ -90,27 +90,44 @@ To use a GUI client (Beekeeper Studio, DBeaver, TablePlus…), connect to `local
 
 ### Prisma workflow
 
-The data model lives in [`src/prisma/contract.prisma`](src/prisma/contract.prisma). To change it:
+The data model lives in [`src/prisma/contract.prisma`](src/prisma/contract.prisma). Every schema change goes through a **migration**: a file in `migrations/` that describes the change and is committed to git, so the schema history is versioned and reviewable.
+
+To change the schema:
 
 1. Edit the models in `contract.prisma`.
 2. Regenerate the contract files:
    ```bash
    pnpm prisma contract emit
    ```
-3. Apply the changes to the database:
+3. Plan a migration (writes it to `migrations/`; does **not** touch the database):
    ```bash
-   pnpm prisma db update
+   pnpm prisma migration plan --name add_user_phone
    ```
+4. Review the generated migration, then apply it to your local database:
+   ```bash
+   pnpm prisma db migrate --advance-ref db
+   ```
+5. Commit the contract files **and** the new migration together.
+
+#### What is the `db` ref?
+
+A **ref** is a named pointer to a contract version, stored in `migrations/app/refs/`. The `db` ref records which version your local database should be at, so `migration plan` only includes the changes made since then.
+
+`--advance-ref db` moves that pointer forward after the migration is applied. Without it, `db migrate` applies the migration but leaves the ref where it was, so the next `migration plan` would include changes you've already applied.
 
 Useful commands:
 
 | Command | What it does |
 | --- | --- |
 | `pnpm prisma contract emit` | Regenerate `contract.json` and `contract.d.ts` from `contract.prisma` |
-| `pnpm prisma db init` | First-time setup: create tables to match the contract |
-| `pnpm prisma db update` | Update the database schema to match the contract |
+| `pnpm prisma migration plan --name <name>` | Create a migration from the contract changes |
+| `pnpm prisma db migrate --advance-ref db` | Apply pending migrations locally and advance the `db` ref |
+| `pnpm prisma migration status` | Show which migrations are pending |
+| `pnpm prisma migration list` | List the migrations on disk |
+| `pnpm prisma migration log` | Show the migration history executed on the database |
 | `pnpm prisma db verify` | Check that the database matches the contract |
-| `pnpm prisma migration status` | Show migration status |
+
+> Avoid mixing in `prisma db update`: it changes the database without writing a migration, and a later `db migrate` on that database fails with `MIGRATION.MARKER_MISMATCH`.
 
 Querying from the code goes through the typed client in [`src/prisma/db.ts`](src/prisma/db.ts):
 
@@ -124,7 +141,7 @@ const user = await db.orm.public.User
 
 More details about Prisma 8 are in [`prisma-8.md`](prisma-8.md).
 
-> The current models (`User`, `Post`) come from Prisma's starter template and will be replaced by the pizza app's models.
+Current models: `User` (with `STAFF` / `ADMIN` roles), `Category`, `Product`, `Order` and `Item` (the products in an order).
 
 ## Project structure
 
@@ -132,7 +149,7 @@ More details about Prisma 8 are in [`prisma-8.md`](prisma-8.md).
 api/
 ├── docker-compose.yml        # Postgres container
 ├── prisma.config.ts          # Prisma CLI config (contract path + DATABASE_URL)
-├── migrations/               # Prisma migration state (generated)
+├── migrations/               # Migrations + refs (commit this folder)
 └── src/
     ├── server.ts             # App entry point: global middlewares + router
     ├── routes.ts             # Route definitions
@@ -210,6 +227,6 @@ curl -X POST http://localhost:3333/users \
 
 ## Next steps
 
-- [ ] Replace the starter `User` / `Post` models with the pizza app models
+- [ ] Create the first migration for the pizza app models
 - [ ] Save users to the database in `CreateUserService` (with a hashed password)
 - [ ] Return `201 Created` when a user is created
